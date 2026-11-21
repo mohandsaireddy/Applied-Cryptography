@@ -1,0 +1,291 @@
+{% extends "base.html" %}
+
+{% block title %}Backup Vault - AES Secure Backup & Recovery{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4">
+
+    <!-- Top Statistics Row -->
+    <div class="row g-3 mb-4">
+        <div class="col-sm-6 col-xl-3">
+            <div class="card stat-card p-3">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="text-secondary small fw-bold text-uppercase">Total Backups</div>
+                        <h2 class="fw-bold my-1 text-light">{{ summary.total_backups }}</h2>
+                        <div class="small text-info"><i class="fa-solid fa-lock me-1"></i> AES-256-GCM Protected</div>
+                    </div>
+                    <div class="stat-icon text-info"><i class="fa-solid fa-file-shield"></i></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-sm-6 col-xl-3">
+            <div class="card stat-card p-3">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="text-secondary small fw-bold text-uppercase">Protected Data</div>
+                        <h2 class="fw-bold my-1 text-light">
+                            {% if summary.total_orig_bytes > 1048576 %}
+                                {{ (summary.total_orig_bytes / 1048576)|round(2) }} MB
+                            {% else %}
+                                {{ (summary.total_orig_bytes / 1024)|round(1) }} KB
+                            {% endif %}
+                        </h2>
+                        <div class="small text-secondary">Original uncompressed volume</div>
+                    </div>
+                    <div class="stat-icon text-primary"><i class="fa-solid fa-database"></i></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-sm-6 col-xl-3">
+            <div class="card stat-card p-3">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="text-secondary small fw-bold text-uppercase">Storage Efficiency</div>
+                        <h2 class="fw-bold my-1 text-success">{{ summary.avg_storage_efficiency|round(1) }}%</h2>
+                        <div class="small text-secondary">Space saved via compression</div>
+                    </div>
+                    <div class="stat-icon text-success"><i class="fa-solid fa-compress"></i></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-sm-6 col-xl-3">
+            <div class="card stat-card p-3">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="text-secondary small fw-bold text-uppercase">Avg Backup Time</div>
+                        <h2 class="fw-bold my-1 text-warning">{{ summary.avg_backup_time|round(1) }} ms</h2>
+                        <div class="small text-secondary">scrypt KDF + AES-GCM</div>
+                    </div>
+                    <div class="stat-icon text-warning"><i class="fa-solid fa-stopwatch"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Backup Creation Form & Upload Zone -->
+    <div class="card mb-4 border-info">
+        <div class="card-header bg-dark d-flex align-items-center justify-content-between py-3">
+            <div class="d-flex align-items-center gap-2">
+                <i class="fa-solid fa-cloud-arrow-up text-info fs-5"></i>
+                <h5 class="mb-0 fw-bold">Create New AES-256 Encrypted Backup</h5>
+            </div>
+            <span class="badge bg-info-subtle text-info border border-info">AEAD Mode: AES-256-GCM</span>
+        </div>
+        <div class="card-body p-4">
+            <form id="backupUploadForm" enctype="multipart/form-data">
+                <div class="row g-4 align-items-center">
+                    
+                    <div class="col-lg-7">
+                        <div class="dropzone-container" id="dropzone">
+                            <i class="fa-solid fa-file-arrow-up fs-1 text-info mb-2"></i>
+                            <h6 class="fw-bold mb-1">Drag and drop file here, or click to browse</h6>
+                            <p class="text-secondary small mb-2">Supports any file type: documents, databases, archives, media (up to 250MB)</p>
+                            <input type="file" id="fileInput" name="file" class="d-none" required>
+                            <span id="selectedFileName" class="badge bg-secondary p-2 d-none">No file chosen</span>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-5">
+                        <div class="p-3 bg-dark rounded border border-secondary">
+                            <h6 class="fw-bold text-light mb-3"><i class="fa-solid fa-key text-info me-2"></i>Key Derivation & Options</h6>
+
+                            <div class="mb-3">
+                                <label for="backupPassword" class="form-label text-secondary small fw-semibold">ACCOUNT MASTER PASSWORD</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-dark border-secondary text-secondary"><i class="fa-solid fa-lock"></i></span>
+                                    <input type="password" class="form-control" id="backupPassword" name="password" placeholder="Verify password to derive AES key" required>
+                                </div>
+                                <div class="form-text text-secondary small">Key is dynamically derived via <code>scrypt</code> with a fresh 16-byte salt.</div>
+                            </div>
+
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" role="switch" id="compressionSwitch" name="compression" value="true" checked>
+                                <label class="form-check-label small" for="compressionSwitch">
+                                    <strong>Enable Pre-Encryption Compression</strong> (zlib)
+                                </label>
+                                <div class="text-secondary small">Reduces storage size and optimizes transfer speed.</div>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary w-100 py-2" id="btnSubmitBackup">
+                                <i class="fa-solid fa-shield-cat me-2"></i> Encrypt & Save Backup
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+            </form>
+
+            <!-- Result alert container for backup upload -->
+            <div id="backupFeedback" class="mt-3 d-none"></div>
+        </div>
+    </div>
+
+    <!-- Backups List Table -->
+    <div class="card">
+        <div class="card-header bg-dark d-flex align-items-center justify-content-between py-3">
+            <div class="d-flex align-items-center gap-2">
+                <i class="fa-solid fa-vault text-warning fs-5"></i>
+                <h5 class="mb-0 fw-bold">Your Encrypted Backups</h5>
+            </div>
+            <span class="badge bg-secondary">{{ backups|length }} Files Secured</span>
+        </div>
+        <div class="card-body p-0">
+            {% if backups %}
+            <div class="table-responsive">
+                <table class="table table-dark table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>File Name</th>
+                            <th>Original Size</th>
+                            <th>Compressed / Ratio</th>
+                            <th>Encrypted Payload</th>
+                            <th>SHA-256 Checksum</th>
+                            <th>Creation Time</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for b in backups %}
+                        <tr id="backup-row-{{ b.id }}">
+                            <td>
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="fa-solid fa-file-shield text-info fs-5"></i>
+                                    <div>
+                                        <strong class="text-light">{{ b.original_filename }}</strong>
+                                        <div class="text-secondary small">ID: #{{ b.id }} &bull; {{ b.backup_time_ms|round(1) }} ms</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                {% if b.original_size > 1048576 %}
+                                    {{ (b.original_size / 1048576)|round(2) }} MB
+                                {% else %}
+                                    {{ (b.original_size / 1024)|round(1) }} KB
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if b.is_compressed %}
+                                    <span class="badge bg-success-subtle text-success border border-success">
+                                        <i class="fa-solid fa-arrow-down me-1"></i>{{ b.compression_ratio }}% saved
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Uncompressed</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="mono small text-secondary">
+                                    {{ (b.encrypted_size / 1024)|round(1) }} KB
+                                </span>
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center gap-1">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2 font-monospace text-info btn-view-hash"
+                                            data-hash="{{ b.checksum_sha256 }}" data-filename="{{ b.original_filename }}" title="Click to view & copy full SHA-256 hash">
+                                        <i class="fa-solid fa-fingerprint me-1"></i>{{ b.checksum_sha256[:8] }}...{{ b.checksum_sha256[-6:] }}
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-info py-1 px-2 btn-copy-hash" data-hash="{{ b.checksum_sha256 }}" title="Copy full SHA-256 to clipboard">
+                                        <i class="fa-regular fa-copy"></i>
+                                    </button>
+                                </div>
+                            </td>
+                            <td class="text-secondary small">{{ b.created_at }}</td>
+                            <td>
+                                <div class="d-flex gap-2">
+                                    <button class="btn btn-sm btn-success btn-recover" data-id="{{ b.id }}" data-filename="{{ b.original_filename }}">
+                                        <i class="fa-solid fa-unlock-keyhole me-1"></i> Recover
+                                    </button>
+                                    <a href="{{ url_for('download_encrypted', backup_id=b.id) }}" class="btn btn-sm btn-outline-info" title="Download raw encrypted ciphertext (.enc)">
+                                        <i class="fa-solid fa-download"></i>
+                                    </a>
+                                    <button class="btn btn-sm btn-outline-danger btn-delete" data-id="{{ b.id }}" data-filename="{{ b.original_filename }}">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="fa-solid fa-folder-open text-secondary fs-1 mb-3"></i>
+                <h5 class="text-secondary">No backups created yet</h5>
+                <p class="text-muted small">Use the upload box above to create your first AES-256 encrypted backup.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+
+<!-- Recovery Password Prompt Modal -->
+<div class="modal fade" id="recoveryModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark border-info">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title fw-bold text-light">
+                    <i class="fa-solid fa-key text-success me-2"></i>Secure Backup Recovery
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-secondary small mb-3">
+                    Restoring <strong class="text-light" id="recoveryFilename"></strong>.
+                    Please authenticate with your master password to derive the AES-256 decryption key and verify data authenticity.
+                </p>
+                <div class="mb-3">
+                    <label for="recoveryPasswordInput" class="form-label text-secondary small fw-semibold">MASTER PASSWORD</label>
+                    <input type="password" class="form-control" id="recoveryPasswordInput" placeholder="Enter password used during backup" required>
+                </div>
+                <div id="recoveryErrorAlert" class="alert alert-danger d-none small"></div>
+            </div>
+            <div class="modal-footer border-secondary">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" id="confirmRecoveryBtn">
+                    <i class="fa-solid fa-unlock me-1"></i> Verify & Decrypt
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- View & Copy Full SHA-256 Modal -->
+<div class="modal fade" id="sha256Modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark border-info">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title fw-bold text-light">
+                    <i class="fa-solid fa-fingerprint text-info me-2"></i>Full SHA-256 Checksum
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label text-secondary small fw-semibold">FILE NAME</label>
+                    <div id="modalSha256Filename" class="text-light fw-bold"></div>
+                </div>
+                <div class="mb-3">
+                    <label for="modalSha256Input" class="form-label text-secondary small fw-semibold">FULL 256-BIT CHECKSUM (64 HEX CHARACTERS)</label>
+                    <div class="input-group">
+                        <textarea class="form-control font-monospace text-info bg-black" id="modalSha256Input" rows="2" readonly style="resize: none; font-size: 0.88rem; letter-spacing: 0.5px;"></textarea>
+                    </div>
+                </div>
+                <div id="modalCopyAlert" class="alert alert-success d-none py-2 small mb-0">
+                    <i class="fa-solid fa-check me-1"></i> SHA-256 checksum copied to clipboard!
+                </div>
+            </div>
+            <div class="modal-footer border-secondary">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="btnModalCopySha256">
+                    <i class="fa-regular fa-copy me-1"></i> Copy SHA-256
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

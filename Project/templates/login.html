@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}User Authentication - AES Secure Backup{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-5 col-lg-4">
+            
+            <div class="text-center mb-4">
+                <div class="d-inline-flex align-items-center justify-content-center bg-dark border border-info rounded-circle mb-3 p-3 shadow">
+                    <i class="fa-solid fa-key text-info fs-2"></i>
+                </div>
+                <h3 class="fw-bold">User Authentication</h3>
+                <p class="text-secondary small">Authenticate identity to access your encrypted backups and derive cryptographic keys</p>
+            </div>
+
+            <div class="card shadow-lg p-3">
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('login') }}">
+                        <div class="mb-3">
+                            <label for="username" class="form-label text-secondary small fw-semibold">USERNAME</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-dark border-secondary text-secondary"><i class="fa-solid fa-user"></i></span>
+                                <input type="text" class="form-control" id="username" name="username" placeholder="Enter your username" required autofocus>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="password" class="form-label text-secondary small fw-semibold">PASSWORD</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-dark border-secondary text-secondary"><i class="fa-solid fa-lock"></i></span>
+                                <input type="password" class="form-control" id="password" name="password" placeholder="Enter your master password" required>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100 py-2">
+                            <i class="fa-solid fa-right-to-bracket me-2"></i> Authenticate & Enter Vault
+                        </button>
+                    </form>
+                </div>
+                <div class="card-footer bg-transparent border-0 text-center pt-0">
+                    <hr class="border-secondary my-3">
+                    <p class="text-secondary small mb-0">Don't have an account? <a href="{{ url_for('register') }}" class="text-info fw-semibold">Register here</a></p>
+                </div>
+            </div>
+
+            <!-- Security Assurance Note -->
+            <div class="card mt-4 border-secondary bg-dark-subtle p-2">
+                <div class="card-body p-2 d-flex align-items-start gap-2">
+                    <i class="fa-solid fa-circle-check text-success fs-5 mt-1"></i>
+                    <div class="small text-secondary">
+                        <strong class="text-light">Zero-Knowledge Storage:</strong> Your raw encryption password is never stored in the database. Only memory-hard scrypt hashes are verified during login.
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

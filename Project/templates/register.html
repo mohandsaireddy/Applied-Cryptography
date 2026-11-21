@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}Create Account - AES Secure Backup{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-5 col-lg-4">
+            
+            <div class="text-center mb-4">
+                <div class="d-inline-flex align-items-center justify-content-center bg-dark border border-info rounded-circle mb-3 p-3 shadow">
+                    <i class="fa-solid fa-user-shield text-info fs-2"></i>
+                </div>
+                <h3 class="fw-bold">Create Vault Account</h3>
+                <p class="text-secondary small">Set up credentials for your encrypted backup storage</p>
+            </div>
+
+            <div class="card shadow-lg p-3">
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('register') }}">
+                        <div class="mb-3">
+                            <label for="username" class="form-label text-secondary small fw-semibold">USERNAME</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-dark border-secondary text-secondary"><i class="fa-solid fa-user"></i></span>
+                                <input type="text" class="form-control" id="username" name="username" placeholder="Choose a unique username" required autofocus>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="password" class="form-label text-secondary small fw-semibold">MASTER PASSWORD</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-dark border-secondary text-secondary"><i class="fa-solid fa-lock"></i></span>
+                                <input type="password" class="form-control" id="password" name="password" placeholder="At least 6 characters" required>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="confirm_password" class="form-label text-secondary small fw-semibold">CONFIRM PASSWORD</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-dark border-secondary text-secondary"><i class="fa-solid fa-lock-open"></i></span>
+                                <input type="password" class="form-control" id="confirm_password" name="confirm_password" placeholder="Re-enter password" required>
+                            </div>
+                            <div class="form-text text-secondary small mt-1">
+                                <i class="fa-solid fa-circle-info text-info me-1"></i> Make sure to remember this password. It derives the AES-256 key required for recovery.
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100 py-2">
+                            <i class="fa-solid fa-user-plus me-2"></i> Register Vault Account
+                        </button>
+                    </form>
+                </div>
+                <div class="card-footer bg-transparent border-0 text-center pt-0">
+                    <hr class="border-secondary my-3">
+                    <p class="text-secondary small mb-0">Already registered? <a href="{{ url_for('login') }}" class="text-info fw-semibold">Log in here</a></p>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}
