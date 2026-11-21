@@ -1,1 +1,175 @@
+{% extends "base.html" %}
 
+{% block title %}Performance Evaluation - AES Secure Backup{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4">
+
+    <!-- Header -->
+    <div class="mb-4">
+        <h3 class="fw-bold mb-1"><i class="fa-solid fa-chart-line text-info me-2"></i>Performance Evaluation Dashboard</h3>
+        <p class="text-secondary small mb-0">Quantifying real-time backup creation time, recovery time, storage efficiency, and successful restores</p>
+    </div>
+
+    <!-- Metrics Summary Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-sm-6 col-lg-3">
+            <div class="card stat-card p-3">
+                <div class="text-secondary small fw-bold text-uppercase">Avg Backup Time</div>
+                <h3 class="fw-bold text-warning my-1">{{ summary.avg_backup_time|round(1) }} ms</h3>
+                <div class="small text-secondary">scrypt KDF + zlib + AES-256-GCM</div>
+            </div>
+        </div>
+
+        <div class="col-sm-6 col-lg-3">
+            <div class="card stat-card p-3">
+                <div class="text-secondary small fw-bold text-uppercase">Avg Recovery Time</div>
+                <h3 class="fw-bold text-info my-1">{{ rec_summary.avg_recovery_time|round(1) }} ms</h3>
+                <div class="small text-secondary">Key Derivation + GCM Verify + Decompress</div>
+            </div>
+        </div>
+
+        <div class="col-sm-6 col-lg-3">
+            <div class="card stat-card p-3">
+                <div class="text-secondary small fw-bold text-uppercase">Storage Efficiency</div>
+                <h3 class="fw-bold text-success my-1">{{ summary.avg_storage_efficiency|round(1) }}%</h3>
+                <div class="small text-secondary">Net reduction in backup payload footprint</div>
+            </div>
+        </div>
+
+        <div class="col-sm-6 col-lg-3">
+            <div class="card stat-card p-3">
+                <div class="text-secondary small fw-bold text-uppercase">Successful Restores</div>
+                <h3 class="fw-bold text-light my-1">{{ rec_summary.successful_recoveries or 0 }}</h3>
+                <div class="small text-success"><i class="fa-solid fa-shield-check me-1"></i> 100% Integrity Verification</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Real User Backup Performance Table -->
+    <div class="card mb-4">
+        <div class="card-header bg-dark d-flex justify-content-between align-items-center py-3">
+            <div class="d-flex align-items-center gap-2">
+                <i class="fa-solid fa-clock-rotate-left text-warning fs-5"></i>
+                <h5 class="mb-0 fw-bold">Backup Creation Performance Log</h5>
+            </div>
+            <span class="badge bg-secondary">{{ recent_backups|length }} Recorded Backups</span>
+        </div>
+        <div class="card-body p-0">
+            {% if recent_backups %}
+            <div class="table-responsive">
+                <table class="table table-dark table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>File Name</th>
+                            <th>Original Size</th>
+                            <th>Encrypted Size</th>
+                            <th>Storage Saved</th>
+                            <th>Backup Time (Latency)</th>
+                            <th>Timestamp</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for b in recent_backups %}
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="fa-solid fa-file-shield text-info"></i>
+                                    <strong class="text-light">{{ b.original_filename }}</strong>
+                                </div>
+                            </td>
+                            <td>
+                                {% if b.original_size > 1048576 %}
+                                    {{ (b.original_size / 1048576)|round(2) }} MB
+                                {% else %}
+                                    {{ (b.original_size / 1024)|round(1) }} KB
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="mono small text-secondary">
+                                    {{ (b.encrypted_size / 1024)|round(1) }} KB
+                                </span>
+                            </td>
+                            <td>
+                                {% if b.is_compressed %}
+                                    <span class="badge bg-success-subtle text-success border border-success">
+                                        <i class="fa-solid fa-arrow-down me-1"></i>{{ b.compression_ratio }}% saved
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Uncompressed</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="text-warning fw-bold">{{ b.backup_time_ms|round(1) }} ms</span>
+                            </td>
+                            <td class="text-secondary small">{{ b.created_at }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5 text-secondary">
+                <i class="fa-solid fa-database fs-2 mb-2 text-muted"></i>
+                <p class="mb-0">No backup records logged yet. Create a backup from the dashboard to evaluate performance.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Recovery Performance Operations -->
+    <div class="card">
+        <div class="card-header bg-dark d-flex justify-content-between align-items-center py-3">
+            <div class="d-flex align-items-center gap-2">
+                <i class="fa-solid fa-unlock-keyhole text-info fs-5"></i>
+                <h5 class="mb-0 fw-bold">Backup Recovery Performance Log</h5>
+            </div>
+            <span class="badge bg-secondary">{{ recent_recoveries|length }} Recorded Recoveries</span>
+        </div>
+        <div class="card-body p-0">
+            {% if recent_recoveries %}
+            <div class="table-responsive">
+                <table class="table table-dark table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Restored File</th>
+                            <th>Recovery Time (Latency)</th>
+                            <th>Authentication & MAC Status</th>
+                            <th>Timestamp</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in recent_recoveries %}
+                        <tr>
+                            <td class="text-secondary small">{{ r.id }}</td>
+                            <td><strong class="text-light">{{ r.filename }}</strong></td>
+                            <td><span class="text-info fw-bold">{{ r.recovery_time_ms|round(1) }} ms</span></td>
+                            <td>
+                                {% if r.status == 'SUCCESS' %}
+                                    <span class="badge bg-success-subtle text-success border border-success">
+                                        <i class="fa-solid fa-check me-1"></i>SUCCESS (VERIFIED)
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-danger-subtle text-danger border border-danger">
+                                        <i class="fa-solid fa-xmark me-1"></i>{{ r.status }}
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td class="text-secondary small">{{ r.created_at }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-4 text-secondary small">
+                <i class="fa-solid fa-rotate-left fs-3 mb-2 text-muted"></i>
+                <p class="mb-0">No recovery operations performed yet. Recover any backup file to view restore latency.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+{% endblock %}
